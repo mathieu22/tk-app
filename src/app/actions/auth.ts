@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { homeFor } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { normalizePhone } from "@/lib/format";
 import { createSession, deleteSession } from "@/lib/session";
@@ -25,7 +26,8 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
   if (!user || !user.active || !ok) return { error: "Téléphone ou mot de passe incorrect.", phone: rawPhone };
 
   await createSession({ userId: user.id, profile: user.profile });
-  redirect("/presence");
+  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  redirect(homeFor(user.profile));
 }
 
 export async function logout() {

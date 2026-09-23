@@ -70,7 +70,7 @@ export default async function PayDashboard({ searchParams }: PageProps<"/cotisat
         title="Cotisations"
         sub={`${monthLabel} · ${memberCount} membre${memberCount > 1 ? "s" : ""}`}
         action={
-          can(user.profile, "payment.create") && (
+          can(user, "payment.create") && (
             <Link href="/cotisations/paiement" className="gph-btn-primary">
               <Plus size={16} strokeWidth={2.5} />
               Paiement

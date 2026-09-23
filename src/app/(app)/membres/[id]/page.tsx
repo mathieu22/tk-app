@@ -43,7 +43,7 @@ export default async function MemberPage({ params }: Props) {
 
   const association = await getAssociation();
   const schoolYear = association.currentSchoolYear;
-  const showFees = can(user.profile, "payment.viewAll");
+  const showFees = can(user, "payment.viewAll");
   if (showFees) await ensureDues(schoolYear);
 
   // Séances passées concernant ce membre (tous les membres ou son groupe), avec son statut.
@@ -68,7 +68,7 @@ export default async function MemberPage({ params }: Props) {
   const qrSvg = await QRCode.toString(qrPayload(member.qrToken), { type: "svg", margin: 1, width: 220, color: { dark: "#1A1A2E" } });
   const phoneDigits = member.phone?.replace(/\D/g, "");
   const fbHref = member.facebook && (/^https?:\/\//.test(member.facebook) ? member.facebook : `https://facebook.com/${encodeURIComponent(member.facebook)}`);
-  const canEdit = can(user.profile, "member.edit");
+  const canEdit = can(user, "member.edit");
 
   const infoRows = [
     { icon: Phone, label: "Téléphone", val: member.phone ? formatPhone(member.phone) : "—" },
@@ -108,7 +108,7 @@ export default async function MemberPage({ params }: Props) {
             <Pencil size={15} /> Modifier
           </Link>
         )}
-        {can(user.profile, "member.delete") && <DeleteMemberButton id={id} name={name} />}
+        {can(user, "member.delete") && <DeleteMemberButton id={id} name={name} />}
         <details className="relative">
           <summary className="gph-btn-primary aspect-square list-none p-2.5 [&::-webkit-details-marker]:hidden" aria-label="Contacter">
             <MessageCircle size={16} strokeWidth={2.5} />

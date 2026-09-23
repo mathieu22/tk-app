@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { decrypt, SESSION_COOKIE } from "@/lib/session-jwt";
 
-const PUBLIC = ["/connexion"];
+// Pages accessibles sans session. /connexion et /activation redirigent si déjà connecté.
+const AUTH_PAGES = ["/connexion", "/activation"];
+const PUBLIC = [...AUTH_PAGES, "/club"]; // /club : vitrine publique du palmarès (US-5.4)
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -9,10 +11,10 @@ export async function proxy(req: NextRequest) {
   const session = await decrypt(req.cookies.get(SESSION_COOKIE)?.value);
 
   if (!isPublic && !session) return NextResponse.redirect(new URL("/connexion", req.nextUrl));
-  if (isPublic && session) return NextResponse.redirect(new URL("/presence", req.nextUrl));
+  if (session && AUTH_PAGES.some((p) => pathname.startsWith(p))) return NextResponse.redirect(new URL("/", req.nextUrl));
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|sw.js).*)"],
 };

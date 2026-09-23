@@ -26,6 +26,14 @@ model Association {
   thresholdGreen     Int     @default(80)
   thresholdOrange    Int     @default(50)
   colors             String  @default("{}") // JSON : couleurs personnalisées
+  darkMode           Boolean @default(false)
+  email              String?
+  permissions        String  @default("{}") // JSON : surcharges de la matrice des permissions (EPIC 8)
+  weightAlertKg      Float   @default(1) // alerte si poids à moins de X kg d'une limite (US-5.5)
+  weighInMaxDays     Int     @default(30) // pesée trop ancienne avant compétition
+  poomToDanAge       Int     @default(15) // âge de conversion poom → dan
+  expenseApprovalMin Int     @default(200000) // dépense à valider par le Président (US-6.3)
+  receiptFooter      String? // mentions affichées sur les reçus
 }
 
 // ───────────── Authentification ─────────────
@@ -41,7 +49,50 @@ model User {
   member       Member?   @relation(fields: [memberId], references: [id])
   parent       Parent?
   createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+  notificationPrefs String @default("{}") // JSON : préférences de notification (US-7.3)
   auditLogs    AuditLog[]
+  tokens       AuthToken[]
+  notifications Notification[]
+}
+
+/// Jetons à usage unique : invitation / activation, réinitialisation, code SMS (US-7.1, 8.3, 9.1).
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // INVITE | RESET | OTP
+  tokenHash String    @unique // SHA-256 du jeton / code, jamais le jeton en clair
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+}
+
+/// File des messages sortants (SMS / email). En dev, rien n'est envoyé : on consulte la table.
+model OutboundMessage {
+  id        String   @id @default(cuid())
+  channel   String // SMS | EMAIL | WHATSAPP
+  to        String
+  subject   String?
+  body      String
+  status    String   @default("QUEUED") // QUEUED | SENT | FAILED
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // ABSENCE | PAYMENT | OVERDUE | GRADE | RESULT | EVENT
+  title     String
+  body      String
+  url       String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
 }
 
 // ───────────── Membres ─────────────
@@ -78,6 +129,7 @@ model Member {
   kukkiwonNo    String?
   medicalInfo   String?
   qrToken       String    @unique // jeton aléatoire signé (US-9.2)
+  photoConsent  Boolean   @default(false) // consentement à l'utilisation des photos (US-9.3)
   archived      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -90,6 +142,8 @@ model Member {
   payments      Payment[]
   gradeHistory  GradePassage[]
   weighIns      WeighIn[]
+  examCandidacies ExamCandidate[]
+  results       Result[]
 
   @@index([lastName, firstName])
 }
@@ -102,7 +156,9 @@ model Parent {
   firstName String
   phone     String       @unique
   email     String?
+  qrToken   String?      @unique // pointage aux réunions des parents (US-1.9 S)
   children  ParentLink[]
+  attendances ParentAttendance[]
 }
 
 model ParentLink {
@@ -128,6 +184,7 @@ model Session {
   group       Group?       @relation(fields: [groupId], references: [id])
   location    String?
   status      String       @default("OPEN") // OPEN | CLOSED
+  seriesId    String? // séances récurrentes créées ensemble (US-1.2 S)
   createdById String?
   createdAt   DateTime     @default(now())
   attendances Attendance[]
@@ -157,10 +214,15 @@ model Event {
   maxSeats          Int?
   registrationUntil DateTime?
   fee               Int? // Ariary
+  audienceGroupIds  String              @default("[]") // JSON : groupes visés si audience = GROUPS
+  cancelled         Boolean             @default(false)
   createdById       String?
   createdAt         DateTime            @default(now())
   days              EventDay[]
   registrations     EventRegistration[]
+  dues              Due[]
+  exam              GradeExam?
+  competition       Competition?
 
   @@index([startDate])
 }
@@ -173,6 +235,19 @@ model EventDay {
   startTime   String?
   endTime     String?
   attendances Attendance[]
+  parentAttendances ParentAttendance[]
+}
+
+model ParentAttendance {
+  id         String   @id @default(cuid())
+  eventDayId String
+  eventDay   EventDay @relation(fields: [eventDayId], references: [id], onDelete: Cascade)
+  parentId   String
+  parent     Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  scannedAt  DateTime @default(now())
+  recordedBy String?
+
+  @@unique([eventDayId, parentId])
 }
 
 model EventRegistration {
@@ -243,9 +318,12 @@ model Due {
   amountDue   Int
   amountPaid  Int                 @default(0)
   status      String              @default("UNPAID") // PAID | PARTIAL | UNPAID
+  eventId     String? // frais d'événement (type EVENT)
+  event       Event?              @relation(fields: [eventId], references: [id])
+  eventKey    String              @default("") // = eventId ou "" (NULL casserait l'unicité)
   allocations PaymentAllocation[]
 
-  @@unique([memberId, feeTypeId, schoolYear, month])
+  @@unique([memberId, feeTypeId, schoolYear, month, eventKey])
   @@index([feeTypeId, schoolYear, month])
 }
 
@@ -264,7 +342,10 @@ model Payment {
   createdAt    DateTime            @default(now())
   cancelled    Boolean             @default(false)
   cancelReason String?
+  cancelledAt  DateTime?
+  cancelledById String?
   allocations  PaymentAllocation[]
+  operation    Operation?
 }
 
 model PaymentAllocation {
@@ -277,7 +358,7 @@ model PaymentAllocation {
   @@id([paymentId, dueId])
 }
 
-// ───────────── Grades (affichage fiche membre ; gestion complète en phase 2) ─────────────
+// ───────────── Grades (EPIC 4) ─────────────
 
 model GradeGrid {
   id     String  @id @default(cuid())
@@ -301,8 +382,13 @@ model Grade {
   poomsae        String?
   drawRule       String?
   minMonths      Int            @default(6)
+  minAge         Int?
+  minAttendance  Int? // taux de présence minimum (%)
   active         Boolean        @default(true)
   passages       GradePassage[]
+  asChild        GradeMapping[] @relation("childGrade")
+  asAdult        GradeMapping[] @relation("adultGrade")
+  examTargets    ExamCandidate[]
 
   @@unique([gridId, kind, number])
 }
@@ -317,7 +403,50 @@ model GradePassage {
   jury        String?
   mention     String?
   observation String?
-  certificate String?
+  certificate String? // n° de certificat Kukkiwon (poom / dan)
+  proofUrl    String? // photo du diplôme (data URL compressée)
+  examId      String?
+  recordedById String?
+  createdAt   DateTime @default(now())
+
+  @@index([memberId, date])
+}
+
+/// Correspondance Enfant → Adulte au passage à 16 ans (question ouverte n°1).
+model GradeMapping {
+  childGradeId String @id
+  childGrade   Grade  @relation("childGrade", fields: [childGradeId], references: [id], onDelete: Cascade)
+  adultGradeId String
+  adultGrade   Grade  @relation("adultGrade", fields: [adultGradeId], references: [id], onDelete: Cascade)
+}
+
+model GradeExam {
+  id         String          @id @default(cuid())
+  eventId    String?         @unique
+  event      Event?          @relation(fields: [eventId], references: [id])
+  date       DateTime
+  location   String?
+  jury       String?
+  external   Boolean         @default(false) // examen poom / dan fédéral
+  status     String          @default("OPEN") // OPEN | CLOSED
+  createdAt  DateTime        @default(now())
+  candidates ExamCandidate[]
+}
+
+model ExamCandidate {
+  id            String    @id @default(cuid())
+  examId        String
+  exam          GradeExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        Member    @relation(fields: [memberId], references: [id])
+  targetGradeId String
+  targetGrade   Grade     @relation(fields: [targetGradeId], references: [id])
+  drawnPoomsae  String? // tirage au sort enregistré au PV
+  scores        String    @default("{}") // JSON : poomsae, kibon, kyorugi, kyukpa, theorie
+  result        String    @default("PENDING") // PENDING | PASSED | FAILED
+  note          String?
+
+  @@unique([examId, memberId])
 }
 
 model WeighIn {
@@ -326,6 +455,157 @@ model WeighIn {
   member   Member   @relation(fields: [memberId], references: [id])
   date     DateTime @default(now())
   weightKg Float
+  recordedById String?
+
+  @@index([memberId, date])
+}
+
+// ───────────── Référentiel fédéral & palmarès (EPIC 5) ─────────────
+
+model Season {
+  id              String           @id @default(cuid())
+  year            Int              @unique // 2026
+  label           String
+  ageCategories   AgeCategory[]
+  allowedPoomsae  AllowedPoomsae[]
+  competitions    Competition[]
+}
+
+model AgeCategory {
+  id        String           @id @default(cuid())
+  seasonId  String
+  season    Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  name      String // Poussins, Cadets, Masters 1…
+  ageMin    Int
+  ageMax    Int? // null = sans limite
+  order     Int
+  weights   WeightCategory[]
+
+  @@unique([seasonId, name])
+}
+
+model WeightCategory {
+  id            String      @id @default(cuid())
+  ageCategoryId String
+  ageCategory   AgeCategory @relation(fields: [ageCategoryId], references: [id], onDelete: Cascade)
+  sex           String // M | F
+  label         String // -45 kg, +65 kg
+  maxKg         Float? // null pour la catégorie « + »
+  order         Int
+}
+
+model AllowedPoomsae {
+  id       String @id @default(cuid())
+  seasonId String
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  label    String // Minimes, Seniors Under 30…
+  ageMin   Int
+  ageMax   Int?
+  poomsae  String // liste séparée par des virgules
+}
+
+model Competition {
+  id        String    @id @default(cuid())
+  eventId   String?   @unique
+  event     Event?    @relation(fields: [eventId], references: [id])
+  seasonId  String?
+  season    Season?   @relation(fields: [seasonId], references: [id])
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  location  String?
+  level     String // LOCAL | REGIONAL | NATIONAL | INTERNATIONAL
+  kind      String    @default("INDIVIDUAL") // INDIVIDUAL | TEAM
+  organizer String?
+  posterUrl String?
+  createdAt DateTime  @default(now())
+  results   Result[]
+
+  @@index([startDate])
+}
+
+model Result {
+  id             String      @id @default(cuid())
+  competitionId  String
+  competition    Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member      @relation(fields: [memberId], references: [id])
+  discipline     String // KYORUGI | POOMSAE_IND | POOMSAE_PAIR | POOMSAE_TEAM | POOMSAE_FREESTYLE | KYUKPA
+  ageCategory    String?
+  sex            String
+  weightCategory String?
+  weighInKg      Float?
+  outcome        String // GOLD | SILVER | BRONZE | RANK | PARTICIPATION | ELIMINATED
+  rank           Int?
+  score          String? // note poomsae
+  details        String      @default("[]") // JSON : combats (adversaire, score, tour)
+  teamName       String?
+  observation    String?
+  photoUrl       String?
+  createdAt      DateTime    @default(now())
+}
+
+// ───────────── Trésorerie (EPIC 6) ─────────────
+
+model TreasuryAccount {
+  id             String      @id @default(cuid())
+  name           String
+  type           String // CASH | MOBILE_MONEY | BANK
+  operator       String? // MVOLA | ORANGE_MONEY | AIRTEL_MONEY
+  openingBalance Int         @default(0)
+  active         Boolean     @default(true)
+  operations     Operation[] @relation("account")
+  transfersIn    Operation[] @relation("transferTo")
+}
+
+model OperationCategory {
+  id         String      @id @default(cuid())
+  name       String
+  type       String // INCOME | EXPENSE
+  system     Boolean     @default(false) // catégorie « Cotisations » alimentée automatiquement
+  operations Operation[]
+  budgets    Budget[]
+
+  @@unique([name, type])
+}
+
+model Operation {
+  id                String             @id @default(cuid())
+  accountId         String
+  account           TreasuryAccount    @relation("account", fields: [accountId], references: [id])
+  date              DateTime
+  type              String // INCOME | EXPENSE | TRANSFER
+  categoryId        String?
+  category          OperationCategory? @relation(fields: [categoryId], references: [id])
+  amount            Int
+  counterparty      String? // tiers / bénéficiaire
+  description       String?
+  proofUrl          String? // justificatif (data URL compressée)
+  paymentId         String?            @unique
+  payment           Payment?           @relation(fields: [paymentId], references: [id])
+  transferAccountId String?
+  transferAccount   TreasuryAccount?   @relation("transferTo", fields: [transferAccountId], references: [id])
+  status            String             @default("APPROVED") // APPROVED | PENDING | REJECTED
+  approvedById      String?
+  approvedAt        DateTime?
+  recordedById      String?
+  createdAt         DateTime           @default(now())
+  cancelled         Boolean            @default(false)
+  cancelReason      String?
+  cancelledAt       DateTime?
+
+  @@index([accountId, date])
+  @@index([date])
+}
+
+model Budget {
+  id         String            @id @default(cuid())
+  schoolYear String
+  categoryId String
+  category   OperationCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  amount     Int
+
+  @@unique([schoolYear, categoryId])
 }
 
 // ───────────── Audit ─────────────

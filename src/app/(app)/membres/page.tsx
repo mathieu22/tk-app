@@ -70,7 +70,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         title="Membres"
         sub={`${activeCount} membre${activeCount > 1 ? "s" : ""} actif${activeCount > 1 ? "s" : ""}`}
         action={
-          can(user.profile, "member.edit") && (
+          can(user, "member.edit") && (
             <Link href="/membres/nouveau" className="gph-btn-primary">
               <UserPlus size={16} strokeWidth={2.5} />
               Ajouter

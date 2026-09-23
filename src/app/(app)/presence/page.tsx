@@ -57,7 +57,7 @@ export default async function PresencePage(props: PageProps<"/presence">) {
         title="Présence"
         sub={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} · ${periodLabel}`}
         action={
-          can(user.profile, "session.manage") && (
+          can(user, "session.manage") && (
             <Link href="/presence/nouvelle" className="gph-btn-primary">
               <Plus size={16} strokeWidth={2.5} />
               Nouvelle session

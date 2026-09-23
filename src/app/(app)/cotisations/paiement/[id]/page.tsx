@@ -114,7 +114,7 @@ export default async function PaymentSuccess({ params }: PageProps<"/cotisations
             Terminé
           </Link>
         </div>
-        {can(user.profile, "payment.create") && (
+        {can(user, "payment.create") && (
           <Link href="/cotisations/paiement" className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary">
             <Plus size={16} strokeWidth={2.5} /> Nouveau paiement
           </Link>

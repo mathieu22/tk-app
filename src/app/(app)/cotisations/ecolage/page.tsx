@@ -65,7 +65,7 @@ export default async function EcolageDetail({ searchParams }: PageProps<"/cotisa
       (!needle || fullName(d.member).toLowerCase().includes(needle) || (d.member.phone ?? "").includes(needle.replace(/\s/g, ""))),
   );
 
-  const canPay = can(user.profile, "payment.create");
+  const canPay = can(user, "payment.create");
   const qs = (patch: Record<string, string>) => {
     const p = new URLSearchParams({ annee: year, mois: String(month), statut: filter.value, ...(q && { q }), ...patch });
     return `/cotisations/ecolage?${p}`;

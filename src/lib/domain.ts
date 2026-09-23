@@ -45,9 +45,12 @@ export const FEE_META = {
   DROIT: { slug: "droit", sublabel: "Droit d'inscription", icon: "file-text", color: "var(--gph-droit)", soft: "var(--gph-droit-soft)" },
   PASSPORT: { slug: "passport", sublabel: "Carte annuelle", icon: "credit-card", color: "var(--gph-passport)", soft: "var(--gph-passport-soft)" },
   ECOLAGE: { slug: "ecolage", sublabel: "Cotisation mensuelle", icon: "graduation-cap", color: "var(--gph-ecolage)", soft: "var(--gph-ecolage-soft)" },
+  EVENT: { slug: "evenement", sublabel: "Frais d'événement", icon: "calendar-days", color: "var(--gph-event)", soft: "var(--gph-event-soft)" },
 } as const;
 export type FeeCode = keyof typeof FEE_META;
-export const FEE_BY_SLUG: Record<string, FeeCode> = { droit: "DROIT", passport: "PASSPORT", ecolage: "ECOLAGE" };
+export const FEE_BY_SLUG: Record<string, FeeCode> = { droit: "DROIT", passport: "PASSPORT", ecolage: "ECOLAGE", evenement: "EVENT" };
+/** Types de cotisations récurrentes (hors frais d'événement). */
+export const RECURRING_FEES = ["DROIT", "PASSPORT", "ECOLAGE"] as const satisfies readonly FeeCode[];
 
 export type Tone = "success" | "warning" | "danger";
 /** Couleur du taux de présence (seuils paramétrables, 80 / 50 par défaut). */

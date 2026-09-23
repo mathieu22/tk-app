@@ -1,13 +1,14 @@
 // Icônes pilotées par des données (types de frais, modes de paiement…).
 // Ailleurs, importer directement depuis lucide-react.
 import {
-  Banknote, Building2, Check, Clock, CreditCard, FileText, GraduationCap, Smartphone, X,
+  Banknote, Building2, CalendarDays, Check, Clock, CreditCard, FileText, GraduationCap, Smartphone, X,
   type LucideProps,
 } from "lucide-react";
 
 const ICONS = {
   banknote: Banknote,
   "building-2": Building2,
+  "calendar-days": CalendarDays,
   check: Check,
   clock: Clock,
   "credit-card": CreditCard,

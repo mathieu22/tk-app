@@ -64,7 +64,7 @@ export default async function AnnualDetail({ params, searchParams }: PageProps<"
 
   const s = stats(dues);
   const rows = dues.filter((d) => !filter.status || d.status === filter.status);
-  const canPay = can(user.profile, "payment.create");
+  const canPay = can(user, "payment.create");
   const qs = (patch: Record<string, string>) =>
     `/cotisations/${meta.slug}?${new URLSearchParams({ annee: year, statut: filter.value, ...patch })}`;
 

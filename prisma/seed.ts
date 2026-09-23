@@ -1,6 +1,8 @@
 // Données de référence (annexe A, types de frais, types d'événements) + jeu de démo.
 // Lancer avec `npm run db:seed`. Idempotent (upsert) pour les référentiels.
 import "dotenv/config";
+import { readdirSync } from "node:fs";
+import path from "node:path";
 import bcrypt from "bcryptjs";
 import { db } from "../src/lib/db";
 import { schoolYearOf } from "../src/lib/format";
@@ -130,6 +132,14 @@ async function main() {
         data: present.map((m) => ({ sessionId: session.id, memberId: m.id, scannedAt: new Date(date.getTime() + 17.5 * 3600e3), mode: "QR" })),
       });
     }
+  }
+
+  // Référentiels des modules : prisma/seeds/NN-module.ts exportant `seed(db)`, exécutés dans l'ordre.
+  const dir = path.join(import.meta.dirname, "seeds");
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".ts")).sort()) {
+    const mod = (await import(path.join(dir, file))) as { seed: (d: typeof db) => Promise<void> };
+    await mod.seed(db);
+    console.log(`  ✓ ${file}`);
   }
 
   console.log("Seed terminé. Admin : +261 34 00 000 00 / admin1234");

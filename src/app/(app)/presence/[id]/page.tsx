@@ -44,7 +44,7 @@ export default async function SessionDetailPage(props: PageProps<"/presence/[id]
   const shown = rows.filter((r) =>
     filter === "presents" ? r.status === "PRESENT" : filter === "absents" ? r.status !== "PRESENT" : true,
   );
-  const manage = can(user.profile, "session.manage");
+  const manage = can(user, "session.manage");
   const open = session.status === "OPEN";
 
   const shareText = encodeURIComponent(
