@@ -41,12 +41,29 @@ SQLite ne persiste pas sur Vercel (système de fichiers éphémère). Pour la pr
    `@prisma/adapter-better-sqlite3` par `@prisma/adapter-pg` dans `src/lib/db.ts`, puis régénérer les migrations.
 3. Définir `DATABASE_URL` et `AUTH_SECRET` dans les variables d'environnement Vercel.
 
+## Écrans (design GPH, 12 écrans)
+
+| Module | Routes |
+|---|---|
+| Présence | `/presence` (tableau de bord, filtre de période), `/presence/nouvelle`, `/presence/[id]` (détail, correction, clôture), `/presence/[id]/scanner` (QR + saisie manuelle) |
+| Membres | `/membres` (recherche, filtres), `/membres/[id]` (fiche, QR, contact), `/membres/nouveau`, `/membres/[id]/modifier` |
+| Cotisations | `/cotisations`, `/cotisations/ecolage`, `/cotisations/droit`, `/cotisations/passport`, `/cotisations/paiement`, `/cotisations/paiement/[id]` (confirmation / reçu) |
+
+Le scanner utilise la caméra : il faut **HTTPS** (ou `localhost`) sur le téléphone.
+
 ## Organisation
 
 ```
-prisma/schema.prisma   Modèle de données (spec §5)
-prisma/seed.ts         Référentiels + démo
-src/lib/db.ts          Client Prisma
-src/lib/format.ts      Formats Ariary, téléphone +261, dates JJ/MM/AAAA, année scolaire
-src/app/               Pages (App Router)
+prisma/schema.prisma      Modèle de données (spec §5)
+prisma/seed.ts            Référentiels + démo
+src/proxy.ts              Redirection vers /connexion si non connecté
+src/instrumentation.ts    Fuseau horaire Indian/Antananarivo
+src/lib/dal.ts            requireUser / requirePermission (contrôle d'accès serveur)
+src/lib/permissions.ts    Matrice des permissions (spec §2.2)
+src/lib/fees.ts           Échéances, répartition des paiements, n° de reçu
+src/lib/attendance.ts     Taux de présence
+src/lib/format.ts         Ariary, téléphone +261, JJ/MM/AAAA, année scolaire
+src/components/           Composants du design (avatar, navigation, en-têtes…)
+src/app/(app)/            Écrans avec navigation ; (scan)/ plein écran ; (auth)/ connexion
+src/app/actions/          Server actions (auth, séances, membres, paiements)
 ```

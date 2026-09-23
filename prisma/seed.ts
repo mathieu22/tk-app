@@ -115,6 +115,23 @@ async function main() {
     }
   }
 
+  // Séances de démo (4 dernières semaines) avec présences
+  if ((await db.session.count()) === 0) {
+    const members = await db.member.findMany({ where: { status: "ACTIVE" } });
+    const titles = ["Entraînement technique", "Entraînement poomsae", "Kyorugi — combat", "Entraînement technique"];
+    for (const [i, title] of titles.entries()) {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (titles.length - i) * 4);
+      const session = await db.session.create({ data: { title, date, startTime: "17:30", endTime: "19:00", location: "Gymnase" } });
+      // Présence déterministe : chaque membre manque environ une séance sur trois
+      const present = members.filter((_, j) => (i + j) % 3 !== 0);
+      await db.attendance.createMany({
+        data: present.map((m) => ({ sessionId: session.id, memberId: m.id, scannedAt: new Date(date.getTime() + 17.5 * 3600e3), mode: "QR" })),
+      });
+    }
+  }
+
   console.log("Seed terminé. Admin : +261 34 00 000 00 / admin1234");
 }
 

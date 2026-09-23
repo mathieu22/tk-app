@@ -87,6 +87,8 @@ export async function recordPayment(input: RecordPaymentInput) {
     });
     if (dues.length !== months.length) throw new Error("Échéance introuvable pour cette période.");
     dues.sort((a, b) => order.indexOf(a.month) - order.indexOf(b.month));
+    if (dues.every((d) => d.amountPaid >= d.amountDue)) throw new Error("Cette période est déjà entièrement payée.");
+    if (input.amount <= 0) throw new Error("Le montant doit être positif.");
 
     const receiptNo = await nextReceiptNo(tx, input.date);
     const payment = await tx.payment.create({
