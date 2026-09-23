@@ -1,26 +1,213 @@
 @import "tailwindcss";
 
+/* Tokens GPH — repris du design (app/tokens.css + ds/colors_and_type.css). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gph-primary: #1b5e20;
+  --gph-primary-deep: #154a18;
+  --gph-primary-soft: #e8f1e8;
+  --gph-accent: #4caf50;
+  --gph-accent-soft: #dcedc8;
+
+  --gph-bg: #f5f7fa;
+  --gph-card: #ffffff;
+  --gph-ink: #1a1a2e;
+  --gph-ink-2: #4b5060;
+  --gph-ink-3: #8a8fa3;
+  --gph-divider: #eceef3;
+  --gph-track: #eef1f6;
+
+  --gph-success: #10b981;
+  --gph-success-soft: #d1fae5;
+  --gph-success-ink: #047857;
+  --gph-warning: #f59e0b;
+  --gph-warning-soft: #fef3c7;
+  --gph-warning-ink: #b45309;
+  --gph-danger: #ef4444;
+  --gph-danger-soft: #fee2e2;
+  --gph-danger-ink: #b91c1c;
+
+  --gph-finance: #0d47a1;
+
+  --gph-droit: #1565c0;
+  --gph-droit-soft: #e3f2fd;
+  --gph-passport: #6a1b9a;
+  --gph-passport-soft: #f3e5f5;
+  --gph-ecolage: #00695c;
+  --gph-ecolage-soft: #e0f2f1;
+
+  --shadow-100: 0 1px 2px 0 rgba(12, 12, 13, 0.05);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+  --color-primary: var(--gph-primary);
+  --color-primary-soft: var(--gph-primary-soft);
+  --color-accent: var(--gph-accent);
+  --color-ink: var(--gph-ink);
+  --color-ink-2: var(--gph-ink-2);
+  --color-ink-3: var(--gph-ink-3);
+  --color-divider: var(--gph-divider);
+  --color-track: var(--gph-track);
+  --color-bg: var(--gph-bg);
+  --color-success: var(--gph-success);
+  --color-warning: var(--gph-warning);
+  --color-danger: var(--gph-danger);
+  --color-finance: var(--gph-finance);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--gph-bg);
+  color: var(--gph-ink);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Composants de base du design ── */
+.gph-card {
+  background: var(--gph-card);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(20, 30, 50, 0.04), 0 4px 12px rgba(20, 30, 50, 0.04);
+  border: 1px solid rgba(20, 30, 50, 0.04);
+}
+
+.gph-btn-primary {
+  background: var(--gph-primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(27, 94, 32, 0.25);
+  cursor: pointer;
+  min-height: 44px;
+}
+.gph-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.gph-btn-primary.full { width: 100%; padding: 14px 16px; font-size: 15px; border-radius: 12px; }
+
+.gph-btn-ghost {
+  background: #fff;
+  color: var(--gph-ink);
+  border: 1px solid var(--gph-divider);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.gph-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-100);
+  flex: 0 0 auto;
+}
+
+.gph-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.gph-badge.success { background: var(--gph-success-soft); color: var(--gph-success-ink); }
+.gph-badge.warning { background: var(--gph-warning-soft); color: var(--gph-warning-ink); }
+.gph-badge.danger { background: var(--gph-danger-soft); color: var(--gph-danger-ink); }
+.gph-badge.neutral { background: var(--gph-track); color: var(--gph-ink-2); }
+.gph-badge.primary { background: var(--gph-primary-soft); color: var(--gph-primary); }
+
+.gph-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; display: inline-block; }
+
+.gph-input {
+  width: 100%;
+  border: 1px solid var(--gph-divider);
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--gph-ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.gph-input:focus { border-color: var(--gph-primary); }
+.gph-input.with-icon { padding-left: 42px; }
+.gph-input[aria-invalid="true"] { border-color: var(--gph-danger); }
+
+.gph-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gph-ink-2);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+  display: block;
+}
+.gph-label .opt { color: var(--gph-ink-3); text-transform: none; font-weight: 500; }
+
+.gph-chip {
+  border: 1px solid var(--gph-divider);
+  background: #fff;
+  color: var(--gph-ink-2);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.gph-chip.active { background: var(--gph-primary); color: #fff; border-color: var(--gph-primary); }
+.gph-chip .count {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--gph-track);
+  color: var(--gph-ink-3);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.gph-chip.active .count { background: rgba(255, 255, 255, 0.22); color: #fff; }
+.gph-chip.role { background: var(--gph-primary-soft); color: var(--gph-primary); border-color: transparent; cursor: default; }
+
+.gph-amount {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes gph-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.97); }
+}
+@keyframes gph-scan {
+  0% { top: 8%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 92%; opacity: 0; }
 }

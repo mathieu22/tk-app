@@ -1,12 +1,10 @@
 // Données de référence (annexe A, types de frais, types d'événements) + jeu de démo.
 // Lancer avec `npm run db:seed`. Idempotent (upsert) pour les référentiels.
 import "dotenv/config";
-import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "../src/lib/db";
 import { schoolYearOf } from "../src/lib/format";
-
-const token = () => randomBytes(24).toString("base64url");
+import { newQrToken } from "../src/lib/qr";
 
 // ─── Annexe A — grilles de grades du club ───
 type G = [number, string, string, string | null, number, string | null, string | null];
@@ -58,11 +56,11 @@ async function main() {
   await seedGrid("Enfant", null, 15, ENFANT);
   await seedGrid("Adulte", 16, null, ADULTE);
 
-  // Types de frais (spec EPIC 3). Montants provisoires — question ouverte n°8.
+  // Types de frais (spec EPIC 3). Montants du design, provisoires — question ouverte n°8.
   const fees = [
-    { code: "DROIT", label: "Droit", periodicity: "YEARLY", color: "#2563eb", amount: 20000 },
-    { code: "PASSPORT", label: "Passport", periodicity: "YEARLY", color: "#7c3aed", amount: 30000 },
-    { code: "ECOLAGE", label: "Écolage", periodicity: "MONTHLY", color: "#0d9488", amount: 15000 },
+    { code: "DROIT", label: "Droit", periodicity: "YEARLY", color: "#1565C0", amount: 50000 },
+    { code: "PASSPORT", label: "Passport", periodicity: "YEARLY", color: "#6A1B9A", amount: 30000 },
+    { code: "ECOLAGE", label: "Écolage", periodicity: "MONTHLY", color: "#00695C", amount: 25000 },
   ];
   for (const { amount, ...f } of fees) {
     const ft = await db.feeType.upsert({ where: { code: f.code }, update: {}, create: f });
@@ -111,7 +109,7 @@ async function main() {
           birthDate: new Date(birth),
           phone: `+26134${String(1000000 + i * 1111).slice(0, 7)}`,
           groupId: groups.find((g) => g.name === group)?.id,
-          qrToken: token(),
+          qrToken: newQrToken(),
         },
       });
     }
