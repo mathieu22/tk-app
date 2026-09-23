@@ -1,0 +1,342 @@
+// Modèle de données — MVP (spec §5, phase 1).
+// SQLite en local ; passer `provider = "postgresql"` pour Supabase au déploiement.
+// Les valeurs « enum » sont stockées en String (compatibilité SQLite) et validées
+// côté application (voir src/lib/domain.ts).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ───────────── Association & réglages ─────────────
+
+model Association {
+  id                 String  @id @default(cuid())
+  name               String
+  logoUrl            String?
+  address            String?
+  phone              String?
+  currentSchoolYear  String // ex. "2025-2026"
+  schoolYearStartMon Int     @default(9) // septembre
+  newMemberDays      Int     @default(30)
+  thresholdGreen     Int     @default(80)
+  thresholdOrange    Int     @default(50)
+  colors             String  @default("{}") // JSON : couleurs personnalisées
+}
+
+// ───────────── Authentification ─────────────
+
+model User {
+  id           String    @id @default(cuid())
+  phone        String    @unique // +261XXXXXXXXX
+  email        String?   @unique
+  passwordHash String
+  profile      String // ADMIN | PRESIDENT | SECRETARY | TREASURER | COACH | ATHLETE | PARENT
+  active       Boolean   @default(true)
+  memberId     String?   @unique
+  member       Member?   @relation(fields: [memberId], references: [id])
+  parent       Parent?
+  createdAt    DateTime  @default(now())
+  auditLogs    AuditLog[]
+}
+
+// ───────────── Membres ─────────────
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  members     Member[]
+  sessions    Session[]
+}
+
+model Member {
+  id            String    @id @default(cuid())
+  matricule     String    @unique // ATH-0001 (colonne Id)
+  lastName      String // Noms (MAJUSCULES)
+  firstName     String // Prénoms
+  sex           String // M | F
+  birthDate     DateTime
+  birthPlace    String?
+  nationality   String    @default("Malagasy")
+  bloodGroup    String? // A+, A-, … Inconnu
+  address       String?
+  phone         String? // Contact, +261…
+  email         String?
+  facebook      String?
+  joinedAt      DateTime  @default(now()) // Date_inscription
+  status        String    @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED | FORMER
+  position      String    @default("ATHLETE") // PRESIDENT | VICE_PRESIDENT | SECRETARY | TREASURER | COACH | ATHLETE
+  photoUrl      String?
+  groupId       String?
+  group         Group?    @relation(fields: [groupId], references: [id])
+  licenseNo     String?
+  kukkiwonNo    String?
+  medicalInfo   String?
+  qrToken       String    @unique // jeton aléatoire signé (US-9.2)
+  archived      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User?
+  parents       ParentLink[]
+  attendances   Attendance[]
+  registrations EventRegistration[]
+  dues          Due[]
+  payments      Payment[]
+  gradeHistory  GradePassage[]
+  weighIns      WeighIn[]
+
+  @@index([lastName, firstName])
+}
+
+model Parent {
+  id        String       @id @default(cuid())
+  userId    String?      @unique
+  user      User?        @relation(fields: [userId], references: [id])
+  lastName  String
+  firstName String
+  phone     String       @unique
+  email     String?
+  children  ParentLink[]
+}
+
+model ParentLink {
+  parentId     String
+  parent       Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  relationship String // FATHER | MOTHER | LEGAL_GUARDIAN | OTHER
+  rank         Int // 1 = TUTEUR1 (contact principal), 2 = TUTEUR2
+
+  @@id([parentId, memberId])
+}
+
+// ───────────── Présence : séances & événements ─────────────
+
+model Session {
+  id          String       @id @default(cuid())
+  title       String
+  date        DateTime
+  startTime   String? // HH:MM
+  endTime     String?
+  groupId     String? // null = tous les membres actifs
+  group       Group?       @relation(fields: [groupId], references: [id])
+  location    String?
+  status      String       @default("OPEN") // OPEN | CLOSED
+  createdById String?
+  createdAt   DateTime     @default(now())
+  attendances Attendance[]
+
+  @@index([date])
+}
+
+model EventType {
+  id     String  @id @default(cuid())
+  label  String  @unique // Stage, Passage de grade, Compétition…
+  icon   String
+  color  String
+  events Event[]
+}
+
+model Event {
+  id                String              @id @default(cuid())
+  title             String
+  typeId            String
+  type              EventType           @relation(fields: [typeId], references: [id])
+  startDate         DateTime
+  endDate           DateTime
+  location          String?
+  description       String?
+  audience          String              @default("ALL") // ALL | GROUPS | SELECTION | BOARD | PARENTS
+  participationMode String              @default("OPEN") // SUMMONS | REGISTRATION | OPEN
+  maxSeats          Int?
+  registrationUntil DateTime?
+  fee               Int? // Ariary
+  createdById       String?
+  createdAt         DateTime            @default(now())
+  days              EventDay[]
+  registrations     EventRegistration[]
+
+  @@index([startDate])
+}
+
+model EventDay {
+  id          String       @id @default(cuid())
+  eventId     String
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  date        DateTime
+  startTime   String?
+  endTime     String?
+  attendances Attendance[]
+}
+
+model EventRegistration {
+  id               String    @id @default(cuid())
+  eventId          String
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId         String
+  member           Member    @relation(fields: [memberId], references: [id])
+  response         String    @default("PENDING") // YES | NO | MAYBE | PENDING
+  waitlistRank     Int?
+  parentalConsent  DateTime?
+  respondedById    String?
+  respondedAt      DateTime?
+
+  @@unique([eventId, memberId])
+}
+
+model Attendance {
+  id          String    @id @default(cuid())
+  sessionId   String?
+  session     Session?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  eventDayId  String?
+  eventDay    EventDay? @relation(fields: [eventDayId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member    @relation(fields: [memberId], references: [id])
+  status      String    @default("PRESENT") // PRESENT | ABSENT | EXCUSED
+  scannedAt   DateTime?
+  leftAt      DateTime?
+  mode        String    @default("QR") // QR | MANUAL
+  recordedBy  String?
+
+  @@unique([sessionId, memberId])
+  @@unique([eventDayId, memberId])
+}
+
+// ───────────── Cotisations ─────────────
+
+model FeeType {
+  id          String   @id @default(cuid())
+  code        String   @unique // DROIT | PASSPORT | ECOLAGE | EVENT
+  label       String
+  periodicity String // YEARLY | MONTHLY
+  color       String
+  tariffs     Tariff[]
+  dues        Due[]
+}
+
+model Tariff {
+  id         String  @id @default(cuid())
+  feeTypeId  String
+  feeType    FeeType @relation(fields: [feeTypeId], references: [id])
+  schoolYear String
+  amount     Int // Ariary
+  groupId    String?
+
+  @@unique([feeTypeId, schoolYear, groupId])
+}
+
+/// Échéance : une ligne par membre × type × période (mois pour l'Écolage).
+model Due {
+  id          String              @id @default(cuid())
+  memberId    String
+  member      Member              @relation(fields: [memberId], references: [id])
+  feeTypeId   String
+  feeType     FeeType             @relation(fields: [feeTypeId], references: [id])
+  schoolYear  String
+  month       Int                 @default(0) // 1-12 ; 0 pour Droit / Passport (NULL casserait l'unicité)
+  amountDue   Int
+  amountPaid  Int                 @default(0)
+  status      String              @default("UNPAID") // PAID | PARTIAL | UNPAID
+  allocations PaymentAllocation[]
+
+  @@unique([memberId, feeTypeId, schoolYear, month])
+  @@index([feeTypeId, schoolYear, month])
+}
+
+model Payment {
+  id           String              @id @default(cuid())
+  receiptNo    String              @unique // REC-2026-00042
+  memberId     String
+  member       Member              @relation(fields: [memberId], references: [id])
+  date         DateTime            @default(now())
+  totalAmount  Int
+  method       String // CASH | MOBILE_MONEY | TRANSFER
+  operator     String? // MVOLA | ORANGE_MONEY | AIRTEL_MONEY
+  reference    String?
+  note         String?
+  recordedById String?
+  createdAt    DateTime            @default(now())
+  cancelled    Boolean             @default(false)
+  cancelReason String?
+  allocations  PaymentAllocation[]
+}
+
+model PaymentAllocation {
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  dueId     String
+  due       Due     @relation(fields: [dueId], references: [id])
+  amount    Int
+
+  @@id([paymentId, dueId])
+}
+
+// ───────────── Grades (affichage fiche membre ; gestion complète en phase 2) ─────────────
+
+model GradeGrid {
+  id     String  @id @default(cuid())
+  name   String  @unique // Enfant | Adulte
+  ageMin Int?
+  ageMax Int?
+  grades Grade[]
+}
+
+model Grade {
+  id             String         @id @default(cuid())
+  gridId         String
+  grid           GradeGrid      @relation(fields: [gridId], references: [id])
+  kind           String // KEUP | POOM | DAN
+  number         Int // 15 = 15e keup
+  beltLabel      String
+  order          Int
+  mainColor      String
+  stripeColor    String?
+  stripeCount    Int            @default(0)
+  poomsae        String?
+  drawRule       String?
+  minMonths      Int            @default(6)
+  active         Boolean        @default(true)
+  passages       GradePassage[]
+
+  @@unique([gridId, kind, number])
+}
+
+model GradePassage {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id])
+  gradeId     String
+  grade       Grade    @relation(fields: [gradeId], references: [id])
+  date        DateTime
+  jury        String?
+  mention     String?
+  observation String?
+  certificate String?
+}
+
+model WeighIn {
+  id       String   @id @default(cuid())
+  memberId String
+  member   Member   @relation(fields: [memberId], references: [id])
+  date     DateTime @default(now())
+  weightKg Float
+}
+
+// ───────────── Audit ─────────────
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  userId   String?
+  user     User?    @relation(fields: [userId], references: [id])
+  action   String
+  entity   String
+  entityId String?
+  details  String?
+  at       DateTime @default(now())
+}
