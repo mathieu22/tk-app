@@ -9,6 +9,8 @@ function daysBetween(start: Date, end: Date) {
 }
 
 export async function seed(db: PrismaClient) {
+  if (process.env.SEED_DEMO !== "1") return;
+
   if (await db.event.findFirst()) return; // déjà seedé
 
   const [stageType, compType, meetingType] = await Promise.all([

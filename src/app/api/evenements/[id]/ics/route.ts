@@ -33,7 +33,7 @@ export async function GET(_req: Request, props: RouteContext<"/api/evenements/[i
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//GPH//Gestion de Presence//FR",
+    "PRODID:-//TKDChoc//Gestion TKDChoc//FR",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:event-${event.id}@gph`,

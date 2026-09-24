@@ -1,4 +1,4 @@
-# Gestion d'association — Club de taekwondo
+# Gestion TKDChoc — Club de taekwondo
 
 Application web mobile-first (PWA) de gestion du club : présences par QR code (séances et
 événements), annuaire des membres, cotisations, grades taekwondo, palmarès, trésorerie et
@@ -19,17 +19,16 @@ espace parents/athlètes. Implémente l'intégralité des phases du spec :
 npm install            # génère aussi le client Prisma (postinstall)
 cp .env.example .env   # puis renseigner AUTH_SECRET (openssl rand -base64 32)
 npx prisma migrate deploy
-npm run db:seed        # référentiels (grades, fédération, trésorerie, événements) + démo
+npm run db:seed        # référentiels uniquement (grades, fédération, trésorerie, événements) — sûr en production
 npm run dev            # http://localhost:3000
 ```
 
-Comptes de démonstration :
+Compte administrateur créé par `npm run db:seed` : `+261 34 00 000 00` / `admin1234`
+(à changer dans Réglages → Utilisateurs).
 
-| Profil | Téléphone | Mot de passe |
-|---|---|---|
-| Administrateur | `+261 34 00 000 00` | `admin1234` |
-| Parent (2 enfants) | `+261 34 00 000 11` | `parent1234` |
-| Athlète | `+261 34 00 000 12` | `athlete1234` |
+Pour peupler une base de **développement** avec des membres, séances, paiements et résultats
+fictifs (jamais sur une base réelle) : `npm run db:seed:demo`. Ajoute aussi un compte parent
+(`+261 34 00 000 11` / `parent1234`) et un compte athlète (`+261 34 00 000 12` / `athlete1234`).
 
 ## Scripts
 
@@ -39,7 +38,8 @@ Comptes de démonstration :
 | `npm run build` | Build de production |
 | `npm run typecheck` / `npm run lint` | Vérifications |
 | `npm run db:migrate` | Nouvelle migration après modification de `prisma/schema.prisma` |
-| `npm run db:seed` | Référentiels et démo (idempotent) — voir `prisma/seeds/*.ts` |
+| `npm run db:seed` | Référentiels (idempotent, sûr en production) — voir `prisma/seeds/*.ts` |
+| `npm run db:seed:demo` | Idem + données de démonstration (dev uniquement) |
 | `npm run db:studio` | Explorateur de la base |
 
 ## Déploiement sur Vercel

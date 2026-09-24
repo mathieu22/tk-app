@@ -1,12 +1,13 @@
-// Données de référence (annexe A, types de frais, types d'événements) + jeu de démo.
-// Lancer avec `npm run db:seed`. Idempotent (upsert) pour les référentiels.
+// Référentiels (grades annexe A, frais, types d'événements, groupes) + compte admin.
+// Lancer avec `npm run db:seed`. Idempotent (upsert) : sûr à rejouer sur une base réelle.
+// Les données de démonstration (membres, séances, événements, palmarès, trésorerie…) ne sont
+// chargées qu'avec `npm run db:seed:demo` (SEED_DEMO=1) — jamais sur une base de production.
 import "dotenv/config";
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
 import { db } from "../src/lib/db";
 import { schoolYearOf } from "../src/lib/format";
-import { newQrToken } from "../src/lib/qr";
 
 // ─── Annexe A — grilles de grades du club ───
 type G = [number, string, string, string | null, number, string | null, string | null];
@@ -52,13 +53,14 @@ async function main() {
   const schoolYear = schoolYearOf(new Date());
 
   if (!(await db.association.findFirst())) {
-    await db.association.create({ data: { name: "Club de Taekwondo", currentSchoolYear: schoolYear } });
+    await db.association.create({ data: { name: "Gestion TKDChoc", currentSchoolYear: schoolYear } });
   }
 
   await seedGrid("Enfant", null, 15, ENFANT);
   await seedGrid("Adulte", 16, null, ADULTE);
 
-  // Types de frais (spec EPIC 3). Montants du design, provisoires — question ouverte n°8.
+  // Types de frais (spec EPIC 3). Montants provisoires — question ouverte n°8, à ajuster
+  // dans Réglages → Montants.
   const fees = [
     { code: "DROIT", label: "Droit", periodicity: "YEARLY", color: "#1565C0", amount: 50000 },
     { code: "PASSPORT", label: "Passport", periodicity: "YEARLY", color: "#6A1B9A", amount: 30000 },
@@ -84,7 +86,7 @@ async function main() {
     await db.group.upsert({ where: { name }, update: {}, create: { name } });
   }
 
-  // Compte administrateur de développement
+  // Compte administrateur (toujours créé, y compris en production : c'est le premier accès à l'application)
   const adminPhone = "+261340000000";
   if (!(await db.user.findUnique({ where: { phone: adminPhone } }))) {
     await db.user.create({
@@ -92,49 +94,8 @@ async function main() {
     });
   }
 
-  // Membres de démo
-  if ((await db.member.count()) === 0) {
-    const groups = await db.group.findMany();
-    const demo = [
-      ["RAKOTOMALALA", "Hery", "M", "1985-04-12", "PRESIDENT", "Adultes"],
-      ["RASOANIRINA", "Voahangy", "F", "1990-09-03", "TREASURER", "Adultes"],
-      ["ANDRIAMANANA", "Tojo", "M", "2012-02-20", "ATHLETE", "Enfants"],
-      ["RAHARISOA", "Mialy", "F", "2014-06-15", "ATHLETE", "Enfants"],
-      ["RANDRIANARISOA", "Fanja", "F", "2009-11-30", "ATHLETE", "Ados"],
-      ["RAZAFINDRAKOTO", "Njaka", "M", "2000-01-08", "COACH", "Adultes"],
-    ] as const;
-    for (const [i, [lastName, firstName, sex, birth, position, group]] of demo.entries()) {
-      await db.member.create({
-        data: {
-          matricule: `ATH-${String(i + 1).padStart(4, "0")}`,
-          lastName, firstName, sex, position,
-          birthDate: new Date(birth),
-          phone: `+26134${String(1000000 + i * 1111).slice(0, 7)}`,
-          groupId: groups.find((g) => g.name === group)?.id,
-          qrToken: newQrToken(),
-        },
-      });
-    }
-  }
-
-  // Séances de démo (4 dernières semaines) avec présences
-  if ((await db.session.count()) === 0) {
-    const members = await db.member.findMany({ where: { status: "ACTIVE" } });
-    const titles = ["Entraînement technique", "Entraînement poomsae", "Kyorugi — combat", "Entraînement technique"];
-    for (const [i, title] of titles.entries()) {
-      const date = new Date();
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() - (titles.length - i) * 4);
-      const session = await db.session.create({ data: { title, date, startTime: "17:30", endTime: "19:00", location: "Gymnase" } });
-      // Présence déterministe : chaque membre manque environ une séance sur trois
-      const present = members.filter((_, j) => (i + j) % 3 !== 0);
-      await db.attendance.createMany({
-        data: present.map((m) => ({ sessionId: session.id, memberId: m.id, scannedAt: new Date(date.getTime() + 17.5 * 3600e3), mode: "QR" })),
-      });
-    }
-  }
-
-  // Référentiels des modules : prisma/seeds/NN-module.ts exportant `seed(db)`, exécutés dans l'ordre.
+  // Référentiels et démo des modules : prisma/seeds/NN-*.ts exportant `seed(db)`, dans l'ordre.
+  // Les fichiers de démonstration se protègent eux-mêmes avec `if (process.env.SEED_DEMO !== "1") return;`.
   const dir = path.join(import.meta.dirname, "seeds");
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".ts")).sort()) {
     const mod = (await import(path.join(dir, file))) as { seed: (d: typeof db) => Promise<void> };
@@ -142,7 +103,11 @@ async function main() {
     console.log(`  ✓ ${file}`);
   }
 
-  console.log("Seed terminé. Admin : +261 34 00 000 00 / admin1234");
+  console.log(
+    process.env.SEED_DEMO === "1"
+      ? "Seed terminé (avec démo). Admin : +261 34 00 000 00 / admin1234"
+      : "Seed terminé (référentiels uniquement). Admin : +261 34 00 000 00 / admin1234",
+  );
 }
 
 main()

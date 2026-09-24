@@ -3,6 +3,8 @@
 import type { Prisma, PrismaClient } from "../../src/generated/prisma/client";
 
 export async function seed(db: PrismaClient) {
+  if (process.env.SEED_DEMO !== "1") return;
+
   if ((await db.operation.count()) > 0) return;
 
   const [caisse, mvola, banque] = await Promise.all([

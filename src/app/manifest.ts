@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "GPH — Gestion de Présence",
-    short_name: "GPH",
+    name: "Gestion TKDChoc",
+    short_name: "TKDChoc",
     description: "Présences, membres et cotisations du club de taekwondo",
     start_url: "/presence",
     display: "standalone",

@@ -8,10 +8,10 @@ const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin
 const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "GPH — Gestion de Présence", template: "%s · GPH" },
+  title: { default: "Gestion TKDChoc", template: "%s · TKDChoc" },
   description: "Présences, membres et cotisations du club de taekwondo",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "GPH", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "TKDChoc", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

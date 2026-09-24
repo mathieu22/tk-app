@@ -25,7 +25,7 @@ export default async function ProfilePage() {
   if (user.parentId) {
     const parent = await db.parent.findUniqueOrThrow({ where: { id: user.parentId } });
     const token = parent.qrToken ?? (await db.parent.update({ where: { id: parent.id }, data: { qrToken: newQrToken() } })).qrToken!;
-    parentQr = await QRCode.toString(`GPH1P:${token}`, { type: "svg", margin: 1, width: 220, color: { dark: "#1A1A2E" } });
+    parentQr = await QRCode.toString(`TKD1P:${token}`, { type: "svg", margin: 1, width: 220, color: { dark: "#1A1A2E" } });
   }
   // Consentement photo : le parent pour ses enfants, l'athlète majeur pour lui-même
   const consentFor = members.filter((m) => user.profile === "PARENT" || !isMinor(m.birthDate));

@@ -6,6 +6,8 @@ import type { PrismaClient } from "../../src/generated/prisma/client";
 const unusablePassword = (plain: string) => bcrypt.hash(plain, 10);
 
 export async function seed(db: PrismaClient) {
+  if (process.env.SEED_DEMO !== "1") return;
+
   const [tojo, mialy, fanja] = await Promise.all([
     db.member.findUnique({ where: { matricule: "ATH-0003" } }), // Tojo Andriamanana, mineur
     db.member.findUnique({ where: { matricule: "ATH-0004" } }), // Mialy Raharisoa, mineure

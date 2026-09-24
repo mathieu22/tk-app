@@ -139,7 +139,7 @@ const POSITION_ALIASES: Record<Position, string[]> = {
   SECRETARY: ["secretaire", "secretairegenerale"],
   TREASURER: ["tresorier", "tresoriere"],
   COACH: ["entraineur", "entraineuse", "coach"],
-  ATHLETE: ["athlete", "membre", "eleve", "elève"],
+  ATHLETE: ["athlete", "membre", "mb", "eleve", "elève"], // "MB" : abréviation « Membre » utilisée par le club
 };
 export const suggestPosition = (raw: string) => suggest(raw, POSITION_ALIASES);
 
@@ -149,7 +149,9 @@ export function suggestBloodGroup(raw: string): (typeof BLOOD_GROUPS)[number] | 
 }
 
 // ── Tuteurs (texte libre → nom + téléphone) ──
-const PHONE_IN_TEXT = /(\+?261[\s.-]?)?0?3[2-8][\s.-]?\d{2}[\s.-]?\d{3}[\s.-]?\d{2}\b/;
+// Un séparateur optionnel devant CHAQUE chiffre (plutôt qu'un groupement 2-3-2 rigide) tolère
+// les regroupements variables du fichier source (ex. "033 02 84 883" au lieu de "033 02 848 83").
+const PHONE_IN_TEXT = /(\+?261[\s.-]?)?0?3[2-8](?:[\s.-]?\d){7}\b/;
 
 export type TutorGuess = { name: string; phone: string | null };
 

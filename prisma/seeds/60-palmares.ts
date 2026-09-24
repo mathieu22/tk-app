@@ -9,6 +9,8 @@ function daysAgo(n: number) {
 }
 
 export async function seed(db: PrismaClient) {
+  if (process.env.SEED_DEMO !== "1") return;
+
   if ((await db.competition.count()) > 0) return;
 
   const [members, eventType] = await Promise.all([

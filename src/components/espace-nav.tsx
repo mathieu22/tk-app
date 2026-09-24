@@ -56,7 +56,7 @@ export function EspaceSideNav({ unread, footer }: { unread: number; footer?: Rea
   return (
     <aside className="sticky top-0 hidden h-screen w-60 flex-none flex-col gap-1 border-r border-divider bg-card p-4 md:flex">
       <div className="mb-6 flex items-center gap-2 px-2 pt-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">GPH</span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">TK</span>
         <span className="text-sm font-bold leading-tight">Mon espace</span>
       </div>
       {ITEMS.map(({ href, label, Icon, exact }) => (

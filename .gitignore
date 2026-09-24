@@ -46,3 +46,6 @@ next-env.d.ts
 # sqlite
 /prisma/*.db
 /prisma/*.db-journal
+
+# Données personnelles réelles (import) — jamais versionnées
+*.csv

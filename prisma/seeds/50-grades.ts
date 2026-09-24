@@ -1,11 +1,5 @@
-// Correspondance Enfant → Adulte (question ouverte n°1) et passages de grade de démonstration.
+// Correspondance Enfant → Adulte (question ouverte n°1, EPIC 4). Référentiel : toujours chargé.
 import type { PrismaClient } from "../../src/generated/prisma/client";
-
-function monthsAgo(n: number) {
-  const d = new Date();
-  d.setMonth(d.getMonth() - n);
-  return d;
-}
 
 export async function seed(db: PrismaClient) {
   const [enfant, adulte] = await Promise.all([
@@ -27,21 +21,6 @@ export async function seed(db: PrismaClient) {
       where: { childGradeId: child.id },
       update: { adultGradeId: adult.id },
       create: { childGradeId: child.id, adultGradeId: adult.id },
-    });
-  }
-
-  if ((await db.gradePassage.count()) > 0) return;
-
-  const demo: { matricule: string; childNumber: number; monthsAgo: number; jury: string; mention?: string }[] = [
-    { matricule: "ATH-0003", childNumber: 13, monthsAgo: 8, jury: "Njaka Razafindrakoto", mention: "Bien" },
-    { matricule: "ATH-0005", childNumber: 12, monthsAgo: 40, jury: "Njaka Razafindrakoto", mention: "Assez bien" },
-  ];
-  for (const d of demo) {
-    const member = await db.member.findUnique({ where: { matricule: d.matricule } });
-    const grade = enfant.grades.find((g) => g.number === d.childNumber);
-    if (!member || !grade) continue;
-    await db.gradePassage.create({
-      data: { memberId: member.id, gradeId: grade.id, date: monthsAgo(d.monthsAgo), jury: d.jury, mention: d.mention },
     });
   }
 }

@@ -307,7 +307,7 @@ export async function remindNonResponders(eventId: string) {
 
 // ─── Pointage (US-1.9) ───
 
-const PARENT_PREFIX = "GPH1P:";
+const PARENT_PREFIX = "TKD1P:";
 const hhmm = (d: Date) => d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
 /** Heure de scan d'origine (mode hors connexion) : bornée entre J-7 et maintenant. */

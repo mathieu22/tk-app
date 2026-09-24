@@ -2,7 +2,7 @@
 // Impossible à deviner ; le régénérer invalide l'ancien.
 import { randomBytes } from "node:crypto";
 
-const PREFIX = "GPH1:";
+const PREFIX = "TKD1:";
 
 export const newQrToken = () => randomBytes(24).toString("base64url");
 
