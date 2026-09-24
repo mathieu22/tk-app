@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Données personnelles réelles (import) — jamais versionnées
 *.csv
+
+# Captures d'écran collées par erreur dans le dossier de travail
+Capture d’écran*.png

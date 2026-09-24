@@ -10,6 +10,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Utilisé par la CLI (migrate, generate, studio) : pooler session-mode, pas le pooler
+    // transaction-mode (DATABASE_URL) que l'application utilise à l'exécution (src/lib/db.ts).
+    url: process.env["DIRECT_URL"],
   },
 });

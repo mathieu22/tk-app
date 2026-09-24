@@ -8,7 +8,7 @@ espace parents/athlètes. Implémente l'intégralité des phases du spec :
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript) + **Tailwind CSS 4**
-- **Prisma 7** — SQLite en local (`prisma/dev.db`), Postgres (Supabase) en production
+- **Prisma 7** — Postgres (Supabase), une seule base en dev comme en production
 - `bcryptjs` (mots de passe), `jose` (sessions signées), `qrcode` + `@zxing/browser` (QR),
   `zod` (validation), `exceljs` (import/export Excel), `pdf-lib` (reçus, PV, bilans PDF),
   `recharts` (graphiques), `idb-keyval` (file hors connexion)
@@ -17,11 +17,16 @@ espace parents/athlètes. Implémente l'intégralité des phases du spec :
 
 ```bash
 npm install            # génère aussi le client Prisma (postinstall)
-cp .env.example .env   # puis renseigner AUTH_SECRET (openssl rand -base64 32)
+cp .env.example .env   # renseigner DATABASE_URL, DIRECT_URL (Supabase) et AUTH_SECRET
 npx prisma migrate deploy
 npm run db:seed        # référentiels uniquement (grades, fédération, trésorerie, événements) — sûr en production
 npm run dev            # http://localhost:3000
 ```
+
+`DATABASE_URL` (pooler **transaction-mode**, port 6543, utilisé par l'application à l'exécution)
+et `DIRECT_URL` (pooler **session-mode**, port 5432, utilisé par la CLI Prisma pour les migrations)
+viennent de Supabase → bouton **Connect** → onglet **ORMs / Prisma**. Éviter la connexion
+« directe » (`db.<ref>.supabase.co`) : elle n'est joignable qu'en IPv6.
 
 Compte administrateur créé par `npm run db:seed` : `+261 34 00 000 00` / `admin1234`
 (à changer dans Réglages → Utilisateurs).
@@ -44,16 +49,15 @@ fictifs (jamais sur une base réelle) : `npm run db:seed:demo`. Ajoute aussi un 
 
 ## Déploiement sur Vercel
 
-SQLite ne persiste pas sur Vercel (système de fichiers éphémère). Pour la production :
-
-1. Créer un projet Supabase et récupérer l'URL Postgres (pooler).
-2. Dans `prisma/schema.prisma`, passer `provider = "postgresql"`, remplacer l'adaptateur
-   `@prisma/adapter-better-sqlite3` par `@prisma/adapter-pg` dans `src/lib/db.ts`, puis régénérer les migrations.
-3. Définir `DATABASE_URL`, `AUTH_SECRET` et `CRON_SECRET` dans les variables d'environnement Vercel.
-4. `vercel.json` déclare la sauvegarde quotidienne (`/api/cron/backup`, protégée par `CRON_SECRET`).
-5. Optionnel : `SMS_GATEWAY_URL` / `EMAIL_GATEWAY_URL` / `GATEWAY_TOKEN` pour l'envoi réel des
-   invitations, codes de connexion et relances (sans passerelle configurée, les messages restent
-   en file dans Réglages → Messages, consultables par le staff).
+1. Importer le dépôt GitHub dans Vercel (**Root Directory** = `web`).
+2. Variables d'environnement à définir dans Vercel :
+   - `DATABASE_URL`, `DIRECT_URL` — la même base Supabase que le développement (ou un projet Supabase séparé pour la production).
+   - `AUTH_SECRET` — `openssl rand -base64 32`.
+   - `CRON_SECRET` — protège `/api/cron/backup`, déjà déclarée en tâche quotidienne dans `vercel.json`.
+   - Optionnel : `SMS_GATEWAY_URL` / `EMAIL_GATEWAY_URL` / `GATEWAY_TOKEN` pour l'envoi réel des
+     invitations, codes de connexion et relances (sans passerelle configurée, les messages restent
+     en file dans Réglages → Messages, consultables par le staff).
+3. **Deploy**.
 
 Le scanner QR utilise la caméra arrière : il faut **HTTPS** (ou `localhost`) sur le téléphone.
 

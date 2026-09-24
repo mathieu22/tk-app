@@ -1,15 +1,18 @@
-// Modèle de données — MVP (spec §5, phase 1).
-// SQLite en local ; passer `provider = "postgresql"` pour Supabase au déploiement.
-// Les valeurs « enum » sont stockées en String (compatibilité SQLite) et validées
-// côté application (voir src/lib/domain.ts).
+// Modèle de données complet (spec §5). Postgres (Supabase), en dev comme en production —
+// une seule base pour éviter toute divergence de comportement entre SQLite et Postgres.
+// Les valeurs « enum » restent stockées en String (portabilité, pas de migration d'enum) et
+// validées côté application (voir src/lib/domain.ts).
 
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
 }
 
+// Prisma 7 : les URLs de connexion ne vivent plus ici mais dans prisma.config.ts
+// (CLI : DIRECT_URL, pooler session-mode) et src/lib/db.ts (runtime : DATABASE_URL, pooler
+// transaction-mode, IPv4).
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ───────────── Association & réglages ─────────────
