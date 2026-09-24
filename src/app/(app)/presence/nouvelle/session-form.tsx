@@ -4,11 +4,19 @@ import { useActionState, useState } from "react";
 import { createSession } from "@/app/actions/sessions";
 import { FormTopBar } from "@/components/ui";
 
+const WEEKDAYS = [
+  { iso: 1, label: "Lun" }, { iso: 2, label: "Mar" }, { iso: 3, label: "Mer" }, { iso: 4, label: "Jeu" },
+  { iso: 5, label: "Ven" }, { iso: 6, label: "Sam" }, { iso: 7, label: "Dim" },
+];
+const toggleDay = (list: number[], d: number) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d].sort());
+
 export function SessionForm({ groups, today }: { groups: { id: string; name: string }[]; today: string }) {
   const [state, action, pending] = useActionState(createSession, undefined);
   const v = state?.values ?? {};
   const e = state?.errors ?? {};
   const [groupId, setGroupId] = useState(v.groupId ?? "");
+  const [repeat, setRepeat] = useState(v.repeat === "on");
+  const [weekdays, setWeekdays] = useState<number[]>(v.weekdays ? v.weekdays.split(",").map(Number).filter(Boolean) : []);
 
   return (
     <form action={action}>
@@ -44,6 +52,31 @@ export function SessionForm({ groups, today }: { groups: { id: string; name: str
         <Field label="Lieu" optional>
           <input name="location" maxLength={120} defaultValue={v.location} placeholder="Gymnase d'Ankorondrano" className="gph-input" />
         </Field>
+
+        <label className="flex items-center gap-2.5 rounded-xl border border-divider px-3.5 py-3">
+          <input type="checkbox" name="repeat" checked={repeat} onChange={(ev) => setRepeat(ev.target.checked)} className="h-4 w-4 accent-[var(--gph-primary)]" />
+          <span className="text-sm font-semibold">Séance récurrente</span>
+        </label>
+
+        {repeat && (
+          <div className="flex flex-col gap-3.5 rounded-xl bg-track/50 p-3">
+            <Field label="Jours de la semaine" error={e.weekdays}>
+              <input type="hidden" name="weekdays" value={weekdays.join(",")} />
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((w) => (
+                  <button type="button" key={w.iso} onClick={() => setWeekdays(toggleDay(weekdays, w.iso))} aria-pressed={weekdays.includes(w.iso)}
+                    className={`gph-chip${weekdays.includes(w.iso) ? " active" : ""}`}>
+                    {weekdays.includes(w.iso) && <Check size={12} strokeWidth={3} />}
+                    {w.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Jusqu'au" error={e.until}>
+              <input name="until" type="date" defaultValue={v.until} className="gph-input" />
+            </Field>
+          </div>
+        )}
 
         <div className="mt-2 flex flex-col gap-2">
           <button name="intent" value="scan" className="gph-btn-primary full" disabled={pending}>

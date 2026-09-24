@@ -160,7 +160,7 @@ export default async function EcolageDetail({ searchParams }: PageProps<"/cotisa
         />
       </div>
 
-      <div className="flex flex-col gap-2 px-4 pb-4">
+      <div className="flex flex-col gap-2 px-4 pb-4 lg:grid lg:grid-cols-2">
         {rows.length === 0 && <EmptyList>Aucun membre pour ce filtre.</EmptyList>}
         {rows.map((d) => (
           <StatusRow
@@ -173,7 +173,7 @@ export default async function EcolageDetail({ searchParams }: PageProps<"/cotisa
                 ? formatAriary(d.amountPaid)
                 : d.status === "PARTIAL"
                   ? `${formatAriary(d.amountPaid)} / ${formatAriary(d.amountDue)}`
-                  : "—"
+                  : d.amountDue !== amount ? `Tarif du groupe : ${formatAriary(d.amountDue)}` : "—"
             }
             href={
               canPay && d.status !== "PAID"

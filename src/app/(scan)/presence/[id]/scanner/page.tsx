@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { expectedMembersWhere } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/dal";
-import { Scanner } from "./scanner";
+import { Scanner } from "../../../_scanner/scanner";
 
 export const metadata: Metadata = { title: "Scanner" };
 
@@ -17,7 +17,7 @@ export default async function ScannerPage(props: PageProps<"/presence/[id]/scann
     db.attendance.count({ where: { sessionId: id, status: "PRESENT" } }),
   ]);
   return (
-    <Scanner sessionId={session.id} title={session.title} closed={session.status === "CLOSED"}
-      expected={expected} initialPresent={present} />
+    <Scanner target={{ kind: "session", id: session.id }} title={session.title} closed={session.status === "CLOSED"}
+      expected={expected} initialPresent={present} closeHref={`/presence/${session.id}`} />
   );
 }

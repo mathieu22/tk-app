@@ -1,7 +1,7 @@
 "use client";
-import { Lock, LockOpen, MoreHorizontal } from "lucide-react";
+import { Lock, LockOpen, MoreHorizontal, Trash2 } from "lucide-react";
 import { useTransition } from "react";
-import { setAttendance, toggleSessionClosed } from "@/app/actions/sessions";
+import { deleteSession, setAttendance, toggleSessionClosed } from "@/app/actions/sessions";
 
 type Status = "PRESENT" | "ABSENT" | "EXCUSED";
 const LABELS: Record<Status, string> = { PRESENT: "Marquer présent", ABSENT: "Marquer absent", EXCUSED: "Marquer excusé" };
@@ -40,6 +40,27 @@ export function CloseSessionButton({ sessionId, open }: { sessionId: string; ope
         start(() => toggleSessionClosed(sessionId));
       }}>
       {open ? <Lock size={16} /> : <LockOpen size={16} />}
+    </button>
+  );
+}
+
+/** Suppression réservée à l'administrateur et au Président (US-1.5). */
+export function DeleteSessionButton({ sessionId, hasSeries }: { sessionId: string; hasSeries: boolean }) {
+  const [pending, start] = useTransition();
+  return (
+    <button className="gph-icon-btn text-danger" disabled={pending} aria-label="Supprimer la séance" title="Supprimer la séance"
+      onClick={() => {
+        const scope: "one" | "series" =
+          hasSeries && confirm("Cette séance fait partie d'une série récurrente.\nOK = supprimer aussi les séances suivantes de la série · Annuler = supprimer seulement celle-ci")
+            ? "series"
+            : "one";
+        if (scope === "one" && !confirm("Supprimer définitivement cette séance ? Cette action est irréversible.")) return;
+        start(async () => {
+          const r = await deleteSession(sessionId, scope);
+          if (r?.error) alert(r.error);
+        });
+      }}>
+      <Trash2 size={16} />
     </button>
   );
 }

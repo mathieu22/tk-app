@@ -152,7 +152,7 @@ export default async function AnnualDetail({ params, searchParams }: PageProps<"
         />
       </div>
 
-      <div className="flex flex-col gap-2 px-4 pb-4">
+      <div className="flex flex-col gap-2 px-4 pb-4 lg:grid lg:grid-cols-2">
         {rows.length === 0 && <EmptyList>{dues.length ? "Aucun membre pour ce filtre." : "Aucune échéance pour cette année."}</EmptyList>}
         {rows.map((d) => {
           const last = d.allocations.map((a) => a.payment.date).sort((a, b) => b.getTime() - a.getTime())[0];
@@ -167,7 +167,7 @@ export default async function AnnualDetail({ params, searchParams }: PageProps<"
                   ? `${formatAriary(d.amountPaid)}${last ? ` · ${formatDate(last)}` : ""}`
                   : d.status === "PARTIAL"
                     ? `${formatAriary(d.amountPaid)} / ${formatAriary(d.amountDue)}${last ? ` · ${formatDate(last)}` : ""}`
-                    : "En attente"
+                    : d.amountDue !== amount ? `En attente · tarif ${formatAriary(d.amountDue)}` : "En attente"
               }
               href={
                 canPay && d.status !== "PAID"

@@ -1,8 +1,10 @@
 "use client";
 // Formulaire d'ajout / modification d'un membre (design : ScreenAddMember ; spec US-2.5).
-import { Camera, Check, ChevronDown, Mail, Phone, User } from "lucide-react";
+import { Check, ChevronDown, Mail, Phone } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import { saveMember, type MemberFormState } from "@/app/actions/members";
+import { ImageInput } from "@/components/image-input";
+import { TutorField, type TutorValue } from "@/components/member-tutor-field";
 import { FormTopBar } from "@/components/ui";
 import { BLOOD_GROUPS, MEMBER_STATUSES, POSITIONS, SEXES } from "@/lib/domain";
 
@@ -24,17 +26,40 @@ export type MemberFormValues = {
   groupId?: string;
   bloodGroup?: string;
   medicalInfo?: string;
+  photoUrl?: string;
+  photoConsent?: boolean;
+  licenseNo?: string;
+  kukkiwonNo?: string;
+  gradeId?: string;
+  weightKg?: string;
+  tutor1?: TutorValue;
+  tutor2?: TutorValue;
 };
 
-export function MemberForm({ values: initial, groups, cancelHref }: {
+export type GradeOption = { id: string; label: string; grid: string };
+
+function isMinorDate(iso?: string) {
+  if (!iso) return false;
+  const b = new Date(`${iso}T00:00:00`);
+  const now = new Date();
+  let a = now.getFullYear() - b.getFullYear();
+  if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) a--;
+  return a < 18;
+}
+
+export function MemberForm({ values: initial, groups, grades, cancelHref }: {
   values: MemberFormValues;
   groups: { id: string; name: string }[];
+  grades: GradeOption[];
   cancelHref: string;
 }) {
   const [state, action, pending] = useActionState<MemberFormState, FormData>(saveMember, undefined);
   const values: MemberFormValues = { ...initial, ...state?.values, id: initial.id };
   const [position, setPosition] = useState(initial.position ?? "ATHLETE");
   const err = state?.fieldErrors ?? {};
+  const [birthDate, setBirthDate] = useState(values.birthDate ?? "");
+  const minor = isMinorDate(birthDate);
+  const grids = [...new Set(grades.map((g) => g.grid))];
 
   return (
     <form action={action} noValidate>
@@ -50,15 +75,13 @@ export function MemberForm({ values: initial, groups, cancelHref }: {
       {values.id && <input type="hidden" name="id" value={values.id} />}
 
       <div className="px-4 pb-6">
-        {/* Photo (upload à venir) */}
-        <div className="flex flex-col items-center pb-5 pt-2.5">
-          <div className="relative flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-dashed border-primary bg-primary-soft">
-            <User size={36} strokeWidth={1.6} className="text-primary" />
-            <div className="absolute -bottom-1 -right-1 flex h-[30px] w-[30px] items-center justify-center rounded-full border-[3px] border-bg bg-primary">
-              <Camera size={14} color="#fff" />
-            </div>
-          </div>
-          <div className="mt-2.5 text-xs font-semibold text-ink-3">Photo : bientôt disponible</div>
+        <div className="flex flex-col items-center gap-2 pb-5 pt-2.5">
+          <ImageInput name="photoUrl" defaultValue={initial.photoUrl} square round maxSize={384} />
+          <label className="flex items-center gap-2 text-xs font-medium text-ink-2">
+            <input type="checkbox" name="photoConsent" defaultChecked={initial.photoConsent} className="h-4 w-4 accent-[var(--gph-primary)]" />
+            Consentement à l&apos;utilisation de la photo
+          </label>
+          {err.photoUrl && <p className="text-xs font-semibold text-danger">{err.photoUrl}</p>}
         </div>
 
         {state?.error && <p role="alert" className="gph-badge danger mb-4 w-full justify-center whitespace-normal py-2.5 text-center text-[13px]">{state.error}</p>}
@@ -83,7 +106,7 @@ export function MemberForm({ values: initial, groups, cancelHref }: {
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Date de naissance" error={err.birthDate}>
-                <input type="date" name="birthDate" defaultValue={values.birthDate} required className="gph-input" aria-invalid={!!err.birthDate} />
+                <input type="date" name="birthDate" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required className="gph-input" aria-invalid={!!err.birthDate} />
               </Field>
               <Field label="Lieu de naissance" optional>
                 <input name="birthPlace" defaultValue={values.birthPlace} className="gph-input" />
@@ -95,7 +118,7 @@ export function MemberForm({ values: initial, groups, cancelHref }: {
           </Section>
 
           <Section title="Contact">
-            <Field label="Téléphone" error={err.phone}>
+            <Field label="Téléphone" optional={minor} error={err.phone}>
               <div className="relative">
                 <Phone size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3" />
                 <input name="phone" type="tel" inputMode="tel" defaultValue={values.phone} placeholder="+261 34 12 345 67" className="gph-input with-icon" aria-invalid={!!err.phone} />
@@ -113,6 +136,14 @@ export function MemberForm({ values: initial, groups, cancelHref }: {
             <Field label="Adresse" optional>
               <textarea name="address" defaultValue={values.address} rows={2} placeholder="Lot II M 45 Antsakaviro, Antananarivo" className="gph-input resize-none" />
             </Field>
+          </Section>
+
+          <Section title="Tuteurs" defaultOpen={minor || !!initial.tutor1}>
+            <p className="-mt-1 text-xs text-ink-3">
+              {minor ? "Tuteur 1 obligatoire pour un mineur : contact principal, destinataire des reçus et notifications." : "Contacts des parents ou tuteurs (facultatif pour un majeur)."}
+            </p>
+            <TutorField prefix="t1" label="Tuteur 1" initial={initial.tutor1} error={err.t1} required={minor} />
+            <TutorField prefix="t2" label="Tuteur 2" initial={initial.tutor2} error={err.t2} />
           </Section>
 
           <Section title="Club">
@@ -156,7 +187,34 @@ export function MemberForm({ values: initial, groups, cancelHref }: {
               <textarea name="medicalInfo" defaultValue={values.medicalInfo} rows={2} className="gph-input resize-none" />
             </Field>
           </Section>
-          {/* TODO Tuteurs (TUTEUR1 / TUTEUR2) et Taekwondo (grade, licence, pesée) — phase 2. */}
+          <Section title="Taekwondo" defaultOpen={false}>
+            <Field label="Grade actuel" optional error={err.gradeId}>
+              <select name="gradeId" defaultValue={initial.gradeId ?? ""} className="gph-input">
+                <option value="">—</option>
+                {grids.map((grid) => (
+                  <optgroup key={grid} label={`Grille ${grid}`}>
+                    {grades.filter((g) => g.grid === grid).map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </Field>
+            {!initial.gradeId && (
+              <Field label="Obtenu le" optional>
+                <input type="date" name="gradeDate" className="gph-input" />
+              </Field>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="N° licence fédérale" optional>
+                <input name="licenseNo" defaultValue={values.licenseNo} className="gph-input" />
+              </Field>
+              <Field label="N° Kukkiwon" optional>
+                <input name="kukkiwonNo" defaultValue={values.kukkiwonNo} className="gph-input" />
+              </Field>
+            </div>
+            <Field label="Poids (kg)" optional error={err.weightKg}>
+              <input name="weightKg" inputMode="decimal" defaultValue={values.weightKg} placeholder="43,5" className="gph-input" aria-invalid={!!err.weightKg} />
+            </Field>
+          </Section>
         </div>
 
         <button type="submit" disabled={pending} className="gph-btn-primary full mt-5">

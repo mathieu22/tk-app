@@ -15,6 +15,7 @@ const FEES: { code: FeeCode; label: string }[] = [
   { code: "DROIT", label: "Droit" },
   { code: "PASSPORT", label: "Passport" },
   { code: "ECOLAGE", label: "Écolage" },
+  { code: "EVENT", label: "Événement" },
 ];
 
 const todayISO = () => {
@@ -31,7 +32,7 @@ function FieldError({ msg }: { msg?: string }) {
 export function PaymentForm({ currentSchoolYear, members, initial }: {
   currentSchoolYear: string;
   members: MemberOption[];
-  initial: { memberId: string | null; feeCode: FeeCode; schoolYear: string; months: number[]; dues: MemberDue[] };
+  initial: { memberId: string | null; feeCode: FeeCode; schoolYear: string; months: number[]; eventId: string | null; dues: MemberDue[] };
 }) {
   const [state, formAction, pending] = useActionState(createPayment, undefined);
   const [loadingDues, startLoading] = useTransition();
@@ -44,7 +45,9 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
   const [months, setMonths] = useState<number[]>(initial.months);
   const [amountText, setAmountText] = useState<string | null>(null); // null = montant dû calculé
   const [method, setMethod] = useState<PaymentMethod>("CASH");
-  const [operator, setOperator] = useState("MVOLA") // opérateur le plus courant, présélectionné;
+  const [operator, setOperator] = useState("MVOLA"); // opérateur le plus courant, présélectionné
+  const [eventId, setEventId] = useState(initial.eventId);
+  const [credit, setCredit] = useState(false);
   const [reference, setReference] = useState("");
   const [date, setDate] = useState(todayISO);
   const [note, setNote] = useState("");
@@ -52,7 +55,12 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
   const member = members.find((m) => m.id === memberId) ?? null;
   const meta = FEE_META[feeCode];
   const monthly = feeCode === "ECOLAGE";
+  const isEvent = feeCode === "EVENT";
   const fe = state?.fieldErrors ?? {};
+  const eventDues = dues.filter((d) => d.feeCode === "EVENT" && d.eventId);
+  const currentEvent = eventDues.find((d) => d.eventId === eventId) ?? eventDues.find((d) => d.status !== "PAID") ?? null;
+  // L'onglet Événement n'apparaît que si le membre a des frais d'événement.
+  const fees = FEES.filter((f) => f.code !== "EVENT" || eventDues.length > 0 || isEvent);
 
   // Années disponibles pour ce type (échéances existantes du membre).
   const years = useMemo(() => {
@@ -62,7 +70,9 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
   const year = years.includes(schoolYear) ? schoolYear : years.includes(currentSchoolYear) ? currentSchoolYear : years.at(-1)!;
 
   const dueFor = (month: number) =>
-    dues.find((d) => d.feeCode === feeCode && d.schoolYear === year && d.month === month);
+    isEvent
+      ? (month === 0 ? currentEvent ?? undefined : undefined)
+      : dues.find((d) => d.feeCode === feeCode && d.schoolYear === year && d.month === month);
   const selectableMonth = (m: number) => {
     const d = dueFor(m);
     return !!d && d.status !== "PAID";
@@ -70,6 +80,8 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
   const selectedMonths = monthly ? months.filter(selectableMonth) : [];
   const selectedDues = (monthly ? selectedMonths.map(dueFor) : [dueFor(0)]).filter((d): d is MemberDue => !!d);
   const annualPaid = !monthly && selectedDues[0]?.status === "PAID";
+  // Tarif du membre (tarif de son groupe s'il existe) : montant dû d'une échéance de la période.
+  const tariff = isEvent ? 0 : (dues.find((d) => d.feeCode === feeCode && d.schoolYear === year)?.amountDue ?? 0);
   const due = selectedDues.reduce((n, d) => n + outstanding(d), 0);
   const amount = amountText === null ? due : Number(amountText.replace(/\D/g, "")) || 0;
 
@@ -80,6 +92,7 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
     setQuery("");
     resetAmount();
     setDues([]);
+    setEventId(null);
     startLoading(async () => setDues(await getMemberDues(id)));
   }
 
@@ -106,6 +119,8 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
       <input type="hidden" name="amount" value={String(amount)} />
       <input type="hidden" name="method" value={method} />
       <input type="hidden" name="operator" value={method === "MOBILE_MONEY" ? operator : ""} />
+      <input type="hidden" name="eventId" value={isEvent ? currentEvent?.eventId ?? "" : ""} />
+      <input type="hidden" name="credit" value={credit && due > 0 && amount > due ? "1" : ""} />
 
       <div className="px-4 pb-32 md:pb-4">
         {/* Membre */}
@@ -151,7 +166,7 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
         {/* Type de frais */}
         <span className="gph-label">Type de paiement</span>
         <div className="mb-4 flex gap-2">
-          {FEES.map((f) => {
+          {fees.map((f) => {
             const m = FEE_META[f.code];
             const sel = feeCode === f.code;
             return (
@@ -174,7 +189,38 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
         </div>
 
         {/* Période */}
-        {(!monthly || years.length > 1) && (
+        {isEvent && (
+          <>
+            <span className="gph-label">Événement</span>
+            <div className="mb-4 flex flex-col gap-2">
+              {eventDues.length === 0 && <p className="text-xs font-semibold text-ink-3">Aucun frais d&apos;événement pour ce membre.</p>}
+              {eventDues.map((d) => {
+                const sel = d.eventId === currentEvent?.eventId;
+                const paid = d.status === "PAID";
+                return (
+                  <button
+                    key={d.eventId} type="button" disabled={paid} aria-pressed={sel}
+                    onClick={() => { setEventId(d.eventId); resetAmount(); }}
+                    className="flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-left text-sm font-bold disabled:cursor-not-allowed"
+                    style={{
+                      background: sel && !paid ? meta.color : paid ? "var(--gph-track)" : "#fff",
+                      color: sel && !paid ? "#fff" : paid ? "var(--gph-ink-3)" : "var(--gph-ink)",
+                      border: sel && !paid ? "1px solid transparent" : "1px solid var(--gph-divider)",
+                    }}
+                  >
+                    <span className="min-w-0 truncate">{d.eventTitle}</span>
+                    <span className="gph-amount flex-none text-xs">
+                      {paid ? "Payé" : d.amountPaid > 0 ? `${formatAriary(d.amountPaid)} / ${formatAriary(d.amountDue)}` : formatAriary(d.amountDue)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <FieldError msg={fe.eventId} />
+          </>
+        )}
+
+        {!isEvent && (!monthly || years.length > 1) && (
           <>
             <span className="gph-label">Année</span>
             <div className="mb-4 flex gap-2">
@@ -243,7 +289,7 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
         )}
 
         {member && loadingDues && <p className="mb-4 text-xs font-semibold text-ink-3">Chargement des échéances…</p>}
-        {annualPaid && (
+        {annualPaid && !isEvent && (
           <p className="gph-badge success mb-4 w-full justify-center py-2.5 text-[13px]">
             <Check size={14} strokeWidth={3} /> {FEES.find((f) => f.code === feeCode)?.label} {year} déjà payé
           </p>
@@ -252,6 +298,7 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
         {/* Montant */}
         <label className="gph-label" htmlFor="amount">
           Montant {due > 0 && <span className="opt">· dû : {formatAriary(due)}</span>}
+          {tariff > 0 && <span className="opt"> · tarif applicable : {formatAriary(tariff)}{monthly ? "/mois" : ""}</span>}
         </label>
         <div className="relative mb-4">
           <input
@@ -267,8 +314,14 @@ export function PaymentForm({ currentSchoolYear, members, initial }: {
         {due > 0 && amount > due && (
           <p className="-mt-2 mb-4 flex items-start gap-1.5 text-xs font-semibold text-[var(--gph-warning-ink)]">
             <AlertTriangle size={14} className="mt-px flex-none" />
-            Montant supérieur au dû ({formatAriary(due)}). Le surplus sera affecté à la dernière échéance.
+            Montant supérieur au dû ({formatAriary(due)}). Le surplus de {formatAriary(amount - due)} sera affecté à la dernière échéance.
           </p>
+        )}
+        {due > 0 && amount > due && (
+          <label className="-mt-2 mb-4 flex items-center gap-2 text-xs font-semibold text-ink-2">
+            <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} className="h-4 w-4 accent-[var(--gph-primary)]" />
+            Enregistrer le surplus comme avoir (mention sur le reçu)
+          </label>
         )}
         {due > 0 && amount > 0 && amount < due && (
           <p className="-mt-2 mb-4 text-xs font-semibold text-ink-3">Paiement partiel : réparti du mois le plus ancien au plus récent.</p>

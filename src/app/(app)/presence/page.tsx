@@ -8,6 +8,7 @@ import { getAssociation, requirePermission } from "@/lib/dal";
 import { pctTone } from "@/lib/domain";
 import { formatDate } from "@/lib/format";
 import { can } from "@/lib/permissions";
+import { PresenceTabs } from "./presence-tabs";
 
 export const metadata: Metadata = { title: "Présence" };
 
@@ -67,6 +68,7 @@ export default async function PresencePage(props: PageProps<"/presence">) {
       />
 
       <div className="px-4">
+        <PresenceTabs active="seances" />
         <div className="mb-3">
           <FilterChips options={PERIODS} active={period} hrefFor={(v) => `/presence?periode=${v}`} />
         </div>
@@ -90,7 +92,7 @@ export default async function PresencePage(props: PageProps<"/presence">) {
         {sessions.length === 0 ? (
           <div className="gph-card p-6 text-center text-sm text-ink-3">Aucune séance sur cette période.</div>
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div className="grid gap-2.5 lg:grid-cols-2">
             {sessions.map((s) => {
               const st = stats.get(s.id)!;
               return (
@@ -102,6 +104,7 @@ export default async function PresencePage(props: PageProps<"/presence">) {
                         {formatDate(s.date)}
                         {s.startTime && ` · ${s.startTime.replace(":", "h")}`}
                         {s.group && ` · ${s.group.name}`}
+                        {s.status === "CLOSED" && " · clôturée"}
                       </div>
                       <div className="text-base font-bold">{s.title}</div>
                     </div>

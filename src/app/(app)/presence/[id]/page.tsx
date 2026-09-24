@@ -1,4 +1,4 @@
-import { Calendar, Lock, MapPin, ScanLine, Share2 } from "lucide-react";
+import { Calendar, Download, FileSpreadsheet, FileText, Lock, MapPin, Repeat, ScanLine, Share2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,7 +10,7 @@ import { getAssociation, requirePermission } from "@/lib/dal";
 import { fullName, pctTone, POSITIONS, type Position } from "@/lib/domain";
 import { formatDate } from "@/lib/format";
 import { can } from "@/lib/permissions";
-import { AttendanceMenu, CloseSessionButton } from "./controls";
+import { AttendanceMenu, CloseSessionButton, DeleteSessionButton } from "./controls";
 
 export const metadata: Metadata = { title: "Détail de session" };
 
@@ -45,6 +45,7 @@ export default async function SessionDetailPage(props: PageProps<"/presence/[id]
     filter === "presents" ? r.status === "PRESENT" : filter === "absents" ? r.status !== "PRESENT" : true,
   );
   const manage = can(user, "session.manage");
+  const canDelete = user.profile === "ADMIN" || user.profile === "PRESIDENT";
   const open = session.status === "OPEN";
 
   const shareText = encodeURIComponent(
@@ -57,10 +58,24 @@ export default async function SessionDetailPage(props: PageProps<"/presence/[id]
       <div className="flex items-center justify-between px-4 pb-2 pt-1.5">
         <BackButton href="/presence" />
         <div className="flex gap-2">
+          <details className="relative">
+            <summary className="gph-icon-btn cursor-pointer list-none" aria-label="Exporter">
+              <Download size={16} />
+            </summary>
+            <div className="gph-card absolute right-0 top-10 z-10 flex w-44 flex-col p-1">
+              <a href={`/api/sessions/${session.id}/export?format=xlsx`} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-bg">
+                <FileSpreadsheet size={15} /> Excel
+              </a>
+              <a href={`/api/sessions/${session.id}/export?format=pdf`} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-bg">
+                <FileText size={15} /> PDF
+              </a>
+            </div>
+          </details>
           <a href={`https://wa.me/?text=${shareText}`} target="_blank" rel="noopener noreferrer" className="gph-icon-btn" aria-label="Partager">
             <Share2 size={16} />
           </a>
           {manage && <CloseSessionButton sessionId={session.id} open={open} />}
+          {canDelete && <DeleteSessionButton sessionId={session.id} hasSeries={!!session.seriesId} />}
         </div>
       </div>
 
@@ -75,6 +90,9 @@ export default async function SessionDetailPage(props: PageProps<"/presence/[id]
               <MapPin size={12} />
               {session.location}
             </>
+          )}
+          {session.seriesId && (
+            <span className="gph-badge primary ml-1"><Repeat size={11} /> Récurrente</span>
           )}
           {!open && (
             <span className="gph-badge neutral ml-1"><Lock size={11} /> Clôturée</span>
@@ -118,7 +136,7 @@ export default async function SessionDetailPage(props: PageProps<"/presence/[id]
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="grid gap-2 lg:grid-cols-2">
           {shown.map(({ m, status, at }) => (
             <div key={m.id} className="gph-card flex items-center gap-3 p-2.5">
               <Avatar name={fullName(m)} size={40} photoUrl={m.photoUrl} />

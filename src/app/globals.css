@@ -52,6 +52,7 @@
   --color-divider: var(--gph-divider);
   --color-track: var(--gph-track);
   --color-bg: var(--gph-bg);
+  --color-card: var(--gph-card);
   --color-success: var(--gph-success);
   --color-warning: var(--gph-warning);
   --color-danger: var(--gph-danger);
@@ -97,7 +98,7 @@ body {
   .gph-btn-primary.full { width: 100%; padding: 14px 16px; font-size: 15px; border-radius: 12px; }
 
   .gph-btn-ghost {
-    background: #fff;
+    background: var(--gph-card);
     color: var(--gph-ink);
     border: 1px solid var(--gph-divider);
     border-radius: 10px;
@@ -116,7 +117,7 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--gph-card);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -145,7 +146,7 @@ body {
   .gph-input {
     width: 100%;
     border: 1px solid var(--gph-divider);
-    background: #fff;
+    background: var(--gph-card);
     border-radius: 12px;
     padding: 14px;
     font-size: 15px;
@@ -171,7 +172,7 @@ body {
 
   .gph-chip {
     border: 1px solid var(--gph-divider);
-    background: #fff;
+    background: var(--gph-card);
     color: var(--gph-ink-2);
     border-radius: 999px;
     padding: 8px 14px;
@@ -215,4 +216,30 @@ body {
   15% { opacity: 1; }
   85% { opacity: 1; }
   100% { top: 92%; opacity: 0; }
+}
+
+/* ── Mode sombre (US-8.1, S) — activé par l'administrateur dans Réglages → Couleurs.
+   Ne redéfinit que les tokens --gph-* (fonds, cartes, encre, bordures, soft). Les composants
+   de base (@layer components ci-dessus) référencent tous var(--gph-card) plutôt qu'un blanc
+   littéral, donc ce bloc suffit à les adapter. */
+:root[data-theme="dark"] {
+  --gph-bg: #14161a;
+  --gph-card: #1e2128;
+  --gph-ink: #f0f1f5;
+  --gph-ink-2: #b8bcc8;
+  --gph-ink-3: #7d8190;
+  --gph-divider: #2d313a;
+  --gph-track: #2a2e36;
+
+  --gph-primary-soft: #16321a;
+  --gph-accent-soft: #1c3320;
+
+  --gph-success-soft: #0f2e24;
+  --gph-warning-soft: #332608;
+  --gph-danger-soft: #331516;
+
+  --gph-droit-soft: #10233a;
+  --gph-passport-soft: #2a1533;
+  --gph-ecolage-soft: #0d2b27;
+  --gph-event-soft: #332608;
 }

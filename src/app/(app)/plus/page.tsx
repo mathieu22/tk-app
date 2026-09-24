@@ -2,11 +2,11 @@ import { ChevronRight, LogOut } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
-import { navIcon } from "@/components/nav";
 import { ScreenHeader } from "@/components/ui";
 import { requireStaff } from "@/lib/dal";
 import { formatPhone } from "@/lib/format";
 import { navFor } from "@/lib/nav";
+import { navIcon } from "@/lib/nav-icons";
 
 export const metadata: Metadata = { title: "Plus" };
 

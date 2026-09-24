@@ -28,7 +28,7 @@ export default async function NewPayment({ searchParams }: PageProps<"/cotisatio
 
   return (
     <div>
-      <FormTopBar cancelHref="/cotisations" title="Nouveau paiement" />
+      <FormTopBar cancelHref={feeCode === "EVENT" && typeof sp.evenement === "string" ? `/cotisations/evenements/${sp.evenement}` : "/cotisations"} title="Nouveau paiement" />
       <PaymentForm
         currentSchoolYear={currentSchoolYear}
         members={members.map((m) => ({
@@ -44,6 +44,7 @@ export default async function NewPayment({ searchParams }: PageProps<"/cotisatio
           feeCode,
           schoolYear: typeof sp.annee === "string" ? sp.annee : currentSchoolYear,
           months: month >= 1 && month <= 12 ? [month] : [],
+          eventId: typeof sp.evenement === "string" ? sp.evenement : null,
           dues: memberId ? await getMemberDues(memberId) : [],
         }}
       />

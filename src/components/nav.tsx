@@ -1,19 +1,11 @@
 "use client";
 // Navigation : barre d'onglets en bas (mobile), barre latérale (≥ md). Spec §3.
-import {
-  Award, Bell, CalendarCheck2, CalendarDays, HeartHandshake, Home, Landmark, LayoutGrid, Settings, Trophy, Users, Wallet,
-  type LucideIcon,
-} from "lucide-react";
+// La résolution icône ← nom vit dans lib/nav-icons.ts (sans "use client") pour rester
+// appelable depuis un composant serveur, ex. /plus.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { navIcon } from "@/lib/nav-icons";
 import type { NavItem } from "@/lib/nav";
-
-const ICONS: Record<string, LucideIcon> = {
-  "calendar-check-2": CalendarCheck2, users: Users, wallet: Wallet, "calendar-days": CalendarDays, award: Award,
-  trophy: Trophy, landmark: Landmark, "heart-handshake": HeartHandshake, settings: Settings, "layout-grid": LayoutGrid,
-  home: Home, bell: Bell,
-};
-export const navIcon = (name: string) => ICONS[name] ?? LayoutGrid;
 
 const MORE: NavItem = { href: "/plus", label: "Plus", icon: "layout-grid" };
 
@@ -25,7 +17,7 @@ export function BottomNav({ primary, secondary }: { primary: NavItem[]; secondar
     items.find((i) => path.startsWith(i.href))?.href ?? (secondary.some((s) => path.startsWith(s.href)) ? MORE.href : "");
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 grid border-t border-divider bg-white pb-[max(12px,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 grid border-t border-divider bg-card pb-[max(12px,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
       style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}
     >
       {items.map(({ href, label, icon }) => {
@@ -59,7 +51,7 @@ export function SideNav({ primary, secondary, footer }: { primary: NavItem[]; se
     );
   };
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 flex-none flex-col gap-1 overflow-y-auto border-r border-divider bg-white p-4 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-60 flex-none flex-col gap-1 overflow-y-auto border-r border-divider bg-card p-4 md:flex">
       <div className="mb-6 flex items-center gap-2 px-2 pt-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">GPH</span>
         <span className="text-sm font-bold leading-tight">Gestion de<br />Présence</span>

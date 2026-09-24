@@ -24,7 +24,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = await themeCss();
   return (
     <html lang="fr" className={`${jakarta.variable} ${jetbrains.variable} h-full`} data-theme={theme.dark ? "dark" : undefined}>
-      <head>{theme.css && <style>{theme.css}</style>}</head>
+      {/* Toujours un unique <style>, jamais un enfant conditionnel (booléen/chaîne) : une expression
+          qui alterne entre "" et un élément produirait un nœud de texte invalide dans <head>
+          et un décalage d'hydratation. */}
+      <head><style dangerouslySetInnerHTML={{ __html: theme.css }} /></head>
       <body className="min-h-full">
         {children}
         <ServiceWorkerRegister />
